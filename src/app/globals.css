@@ -136,3 +136,17 @@ body {
 .animate-progress {
   animation: progress 2s ease-in-out forwards;
 }
+/* Template card hover glow */
+@keyframes template-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(34, 211, 238, 0); }
+  50% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+}
+
+.template-selected {
+  animation: template-glow 2s ease-in-out infinite;
+}
+
+/* Caption textarea transition */
+textarea {
+  transition: height 0.2s ease, border-color 0.2s ease;
+}

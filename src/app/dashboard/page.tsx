@@ -1,18 +1,25 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ [key: string]: string | undefined }> 
+}) {
   const supabase = await createClient()
   
+  // ✅ FIX: Removed double braces
   const { data: { user } } = await supabase.auth.getUser()
   
+  const params = await searchParams
+  const submitted = params.submitted
+
   if (!user) {
     return redirect('/auth/login')
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Header */}
       <header className="border-b border-white/10 bg-slate-900/50 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Legacy Album</h1>
@@ -30,9 +37,15 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-4xl">
+          
+          {submitted === 'true' && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-300 px-4 py-3 rounded-lg mb-6">
+              🎉 Your order has been submitted! We&apos;ll notify you when it ships.
+            </div>
+          )}
+
           <h2 className="text-3xl font-bold mb-2">
             Welcome back, {user.user_metadata?.full_name || 'User'}! 👋
           </h2>
@@ -40,13 +53,12 @@ export default async function DashboardPage() {
             Ready to preserve your memories?
           </p>
 
-          {/* Quick Actions */}
           <div className="grid md:grid-cols-3 gap-6">
             <a 
               href="/upload"
               className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-400/50 transition-all hover:scale-105 group"
             >
-              <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-cyan-500/30">
+              <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -59,7 +71,7 @@ export default async function DashboardPage() {
               href="/orders"
               className="glass p-6 rounded-2xl border border-white/10 hover:border-pink-400/50 transition-all hover:scale-105 group"
             >
-              <div className="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-pink-500/30">
+              <div className="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
