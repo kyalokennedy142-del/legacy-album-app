@@ -150,3 +150,12 @@ body {
 textarea {
   transition: height 0.2s ease, border-color 0.2s ease;
 }
+@media print {
+  .page-break-after {
+    page-break-after: always;
+  }
+  
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

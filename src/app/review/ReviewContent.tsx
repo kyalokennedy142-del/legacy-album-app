@@ -1,12 +1,14 @@
+// src/app/review/ReviewContent.tsx
 /* eslint-disable @next/next/no-img-element */
  
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { TEMPLATES } from '@/lib/templates'
 import { FaArrowLeft, FaCheck, FaEdit, FaSpinner } from 'react-icons/fa'
+import DownloadPDFButton from '@/components/DownloadPDFButton'
 
 type Photo = {
   id: string
@@ -20,6 +22,16 @@ type DraftOrder = {
   id: string
   template_id: string | null
   status: string
+  created_at: string
+  user_id: string
+}
+
+type User = {
+  id: string
+  email: string
+  user_metadata: {
+    full_name?: string
+  }
 }
 
 export default function ReviewContent() {
@@ -30,8 +42,12 @@ export default function ReviewContent() {
   const [isMounted, setIsMounted] = useState(false)
   const [order, setOrder] = useState<DraftOrder | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
+  // ✅ REF for PDF generation
+  const pdfContentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setIsMounted(true)
@@ -48,15 +64,26 @@ export default function ReviewContent() {
 
     const loadData = async () => {
       try {
+        // Get user
+        const { data: { user: userData } } = await supabase.auth.getUser()
+        if (!userData) {
+          safePush('/auth/login')
+          return
+        }
+        setUser(userData as User)
+
+        // Get order
         const { data: orderData, error: orderError } = await supabase
           .from('draft_orders')
           .select('*')
           .eq('id', orderId)
+          .eq('user_id', userData.id)
           .single()
 
         if (orderError || !orderData) throw orderError
         setOrder(orderData)
 
+        // Get photos
         const { data: photoData, error: photoError } = await supabase
           .from('order_photos')
           .select('id, public_url, file_name, caption, sequence_number')
@@ -151,6 +178,8 @@ export default function ReviewContent() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        
+        {/* Template Info */}
         <section className="mb-8 glass rounded-2xl p-6">
           <h2 className="text-lg font-semibold mb-2 neon-pink">Selected Template</h2>
           <p className="text-gray-300">
@@ -158,32 +187,63 @@ export default function ReviewContent() {
           </p>
         </section>
 
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-4 neon-cyan">Your Photos ({photos.length})</h2>
+        {/* PDF Download Button */}
+        {selectedTemplate && (
+          <div className="flex justify-center mb-6">
+            <DownloadPDFButton
+              targetRef={pdfContentRef}
+              fileName={`legacy-album-${order.id.slice(0, 8)}`}
+            />
+          </div>
+        )}
+
+        {/* PDF Content - This gets captured */}
+        <div 
+          ref={pdfContentRef} 
+          className="glass rounded-2xl p-6 mb-8 bg-white text-slate-900"
+        >
+          {/* Header for PDF */}
+          <div className="border-b border-gray-200 pb-4 mb-4">
+            <h2 className="text-2xl font-bold text-slate-800">Legacy Album Proof</h2>
+            <p className="text-slate-500">{selectedTemplate?.name || 'Custom'} Template</p>
+            <div className="flex justify-between mt-2 text-xs text-slate-400">
+              <span>Order: {order.id.slice(0, 8)}</span>
+              <span>{user?.user_metadata?.full_name || user?.email || 'Customer'}</span>
+              <span>{new Date(order.created_at).toLocaleDateString('en-KE')}</span>
+            </div>
+          </div>
+
+          {/* Photo Grid */}
+          <h3 className="text-lg font-semibold mb-4 text-slate-800">Your Photos ({photos.length})</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {photos.map((photo, index) => (
-              <div key={photo.id} className="glass rounded-xl overflow-hidden group relative">
-                <div className="aspect-square relative">
-                  <img 
-                    src={photo.public_url} 
-                    alt={photo.file_name}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
+              <div key={photo.id} className="relative">
+                <img 
+                  src={photo.public_url} 
+                  alt={photo.file_name}
+                  className="w-full h-32 object-cover rounded-lg"
+                  crossOrigin="anonymous"
+                />
                 {photo.caption && (
-                  <div className="p-3">
-                    <p className="text-sm text-gray-300 italic">&ldquo;{photo.caption}&rdquo;</p>
-                  </div>
+                  <p className="text-xs text-gray-600 mt-1 italic text-center">
+                    &ldquo;{photo.caption}&rdquo;
+                  </p>
                 )}
-                <div className="absolute top-2 right-2 w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center text-xs font-bold text-slate-900">
+                <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
                   {index + 1}
                 </div>
               </div>
             ))}
           </div>
-        </section>
 
+          {/* Footer for PDF */}
+          <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-slate-400">
+            Legacy Album • Proof for printing • Not for distribution • 
+            Generated {new Date().toLocaleDateString()}
+          </div>
+        </div>
+
+        {/* Order Summary */}
         <section className="glass rounded-2xl p-6 mb-8">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-2 text-sm">
@@ -202,6 +262,7 @@ export default function ReviewContent() {
           </div>
         </section>
 
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => safePush('/customize')}
@@ -227,6 +288,7 @@ export default function ReviewContent() {
             )}
           </button>
         </div>
+
       </main>
     </div>
   )

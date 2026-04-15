@@ -1,117 +1,144 @@
-// src/app/upload/page.tsx
+// src/app/auth/update-password/page.tsx
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import PhotoUpload from '@/components/PhotoUpload'
-import { FaArrowRight } from 'react-icons/fa'
+import { FaLock, FaSpinner, FaCheckCircle } from 'react-icons/fa'
 
-export default function UploadPage() {
+export default function UpdatePasswordPage() {
   const router = useRouter()
-  const [userId, setUserId] = useState<string | null>(null)
-  const [draftOrderId, setDraftOrderId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const searchParams = useSearchParams()
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const supabase = createClient()
 
+  // Check if user is coming from email reset link
   useEffect(() => {
-    const supabase = createClient()
+    const hash = window.location.hash
+    if (hash.includes('access_token')) {
+      // Supabase will auto-attach the session
+      // User is now authenticated and can update password
+    }
+  }, [])
 
-    const init = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          router.push('/auth/login')
-          return
-        }
-        
-        setUserId(user.id)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-        // ✅ FIX: Don't destructure id directly - data could be null
-        const { data, error: draftError } = await supabase
-          .from('draft_orders')
-          .insert({ user_id: user.id, status: 'draft' })
-          .select('id')
-          .single()
-
-        if (draftError || !data) {
-          console.error('Failed to create draft order', draftError)
-          setError('Failed to create order. Please try again.')
-          return
-        }
-
-        // ✅ FIX: Access id safely after null check
-        setDraftOrderId(data.id)
-
-      } catch (err) {
-        console.error('Initialization error:', err)
-        setError('An unexpected error occurred')
-      } finally {
-        setLoading(false)
-      }
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters')
+      setLoading(false)
+      return
     }
 
-    init()
-  }, [router])
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
 
-  const handleUploadComplete = () => {
-    if (draftOrderId) {
-      router.push(`/customize?orderId=${draftOrderId}`)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (error) throw error
+
+      setSuccess(true)
+      // Redirect to profile after 2 seconds
+      setTimeout(() => {
+        router.push('/profile?password-updated=true')
+      }, 2000)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update password'
+      setError(message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (loading) {
+  if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        <div className="animate-spin h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full" />
-      </div>
-    )
-  }
-
-  if (error || !userId || !draftOrderId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white p-4">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white">
         <div className="text-center glass rounded-2xl p-8 max-w-md">
-          <p className="text-lg mb-4 text-red-400">{error || 'Unable to initialize upload'}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-cyan-500 text-slate-900 rounded-full font-medium hover:bg-cyan-400 transition"
-          >
-            Try Again
-          </button>
+          <FaCheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Password Updated!</h2>
+          <p className="text-gray-400 mb-6">Redirecting to your profile...</p>
+          <div className="animate-spin h-6 w-6 border-2 border-cyan-500 border-t-transparent rounded-full mx-auto" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-950 to-black text-white p-6 pt-24">
-      <div className="container mx-auto max-w-4xl">
-        <div className="text-center mb-12 animate-slide-down">
-          <h1 className="text-4xl font-bold mb-4 neon-pink">Upload Your Memories</h1>
-          <p className="text-gray-400 max-w-xl mx-auto">
-            Select your favorite photos. We support JPG, PNG, and WebP up to 10MB each.
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white p-4">
+      <div className="glass rounded-2xl p-8 max-w-md w-full">
+        <div className="text-center mb-6">
+          <FaLock className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold">Set New Password</h1>
+          <p className="text-gray-400 text-sm mt-1">Enter your new password below</p>
         </div>
 
-        <div className="mb-12">
-          <PhotoUpload 
-            userId={userId} 
-            draftOrderId={draftOrderId}
-            onUploadComplete={handleUploadComplete} 
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-300">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="••••••••"
+              minLength={8}
+              className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              required
+              disabled={loading}
+            />
+          </div>
 
-        <div className="text-center mt-12">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-300">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              required
+              disabled={loading}
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
           <button
-            onClick={handleUploadComplete}
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-bold text-lg hover:scale-105 transition-all shadow-[0_0_20px_rgba(34,211,238,0.4)]"
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg font-medium bg-cyan-500 hover:bg-cyan-600 text-slate-900 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            Continue to Templates
-            <FaArrowRight />
+            {loading ? (
+              <>
+                <FaSpinner className="animate-spin" /> Updating...
+              </>
+            ) : (
+              <>Update Password</>
+            )}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   )

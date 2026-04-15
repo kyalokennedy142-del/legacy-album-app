@@ -15,10 +15,13 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotSuccess, setForgotSuccess] = useState(false)
+
   const router = useRouter()
   const supabase = createClient()
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+
+  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -28,9 +31,13 @@ export default function LoginPage() {
         email,
         password,
       })
-      if (error) throw error
+
+      if (error) {
+        // ✅ FIX: Throw standard Error to satisfy TS strict mode
+        throw new Error(error.message)
+      }
+
       router.push('/dashboard')
-      router.refresh()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Sign in failed'
       setError(message)
@@ -44,26 +51,28 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${origin}/auth/callback`,
         },
       })
-      if (error) throw error
+
+      if (error) throw new Error(error.message)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Google sign in failed'
       setError(message)
     }
   }
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setForgotLoading(true)
     setError(null)
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
+        redirectTo: `${origin}/auth/update-password`,
       })
-      if (error) throw error
+
+      if (error) throw new Error(error.message)
       setForgotSuccess(true)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to send reset email'
@@ -74,11 +83,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-black p-4 relative overflow-hidden">
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-200 h-200 bg-pink-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-200 h-200 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute -top-1/2 -left-1/2 w-[200px] h-[200px] bg-pink-500/10 rounded-full blur-3xl animate-pulse" />
+        <div
+          className="absolute -bottom-1/2 -right-1/2 w-[200px] h-[200px] bg-cyan-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: '1s' }}
+        />
       </div>
 
       {/* Login Card */}
@@ -100,48 +112,44 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSignIn} className="space-y-5">
-            {/* Email - Staggered Animation */}
+            {/* Email */}
             <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="w-full px-6 py-3 rounded-full bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 
-                  focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
+                className="w-full px-6 py-3 rounded-full bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
                 required
                 disabled={loading}
               />
             </div>
 
-            {/* Password - Staggered Animation */}
+            {/* Password */}
             <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full px-6 py-3 rounded-full bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 
-                  focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
+                className="w-full px-6 py-3 rounded-full bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
                 required
                 disabled={loading}
               />
             </div>
 
-            {/* Sign In Button - Staggered Animation */}
+            {/* Sign In Button */}
             <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold 
-                  hover:from-cyan-300 hover:to-cyan-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
-                  hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:from-cyan-300 hover:to-cyan-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] hover:scale-[1.02] active:scale-[0.98]"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
 
-            {/* Links Row - Staggered Animation */}
+            {/* Links Row */}
             <div className="flex justify-between text-sm animate-slide-up" style={{ animationDelay: '0.4s' }}>
               <button
                 type="button"
@@ -165,16 +173,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Google Sign In - Staggered Animation */}
+            {/* Google Sign In */}
             <div className="animate-slide-up" style={{ animationDelay: '0.6s' }}>
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-white/10 hover:bg-white/20 
-                  border border-white/30 rounded-full py-3 text-white font-medium transition-all
-                  disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]
-                  hover:border-cyan-400/50 group"
+                className="w-full flex items-center justify-center gap-3 bg-white/10 hover:bg-white/20 border border-white/30 rounded-full py-3 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] hover:border-cyan-400/50 group"
               >
                 <FcGoogle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 Continue with Google
@@ -214,7 +219,8 @@ export default function LoginPage() {
                 </div>
                 <p className="text-white font-semibold mb-2">Check your email!</p>
                 <p className="text-gray-400 text-sm mb-6">
-                  We&apos;ve sent a password reset link to <span className="text-cyan-400">{forgotEmail}</span>
+                  We&apos;ve sent a password reset link to{' '}
+                  <span className="text-cyan-400">{forgotEmail}</span>
                 </p>
                 <button
                   onClick={() => {
@@ -222,7 +228,7 @@ export default function LoginPage() {
                     setForgotSuccess(false)
                     setForgotEmail('')
                   }}
-                  className="w-full py-3 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:scale-[1.02] transition-all"
+                  className="w-full py-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:scale-[1.02] transition-all"
                 >
                   Back to Login
                 </button>
@@ -234,8 +240,7 @@ export default function LoginPage() {
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full px-6 py-3 rounded-full bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 
-                    focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
+                  className="w-full px-6 py-3 rounded-full bg-white/10 border-2 border-white/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all"
                   required
                   disabled={forgotLoading}
                 />
@@ -258,8 +263,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="flex-1 py-3 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold 
-                      hover:from-cyan-300 hover:to-cyan-400 transition-all disabled:opacity-50"
+                    className="flex-1 py-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:from-cyan-300 hover:to-cyan-400 transition-all disabled:opacity-50"
                   >
                     {forgotLoading ? 'Sending...' : 'Send Reset Link'}
                   </button>
