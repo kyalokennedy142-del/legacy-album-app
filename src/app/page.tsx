@@ -1,65 +1,78 @@
-import Image from "next/image";
+// src/app/page.tsx
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { FaImage, FaBook, FaShippingFast } from 'react-icons/fa'
 
-export default function Home() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // ✅ Auto-redirect authenticated users to dashboard
+  if (user) {
+    redirect('/dashboard')
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-39.5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-950 to-black text-white flex flex-col items-center justify-center px-4 py-16">
+      
+      {/* Hero Section */}
+      <div className="text-center max-w-3xl mx-auto mb-16">
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 neon-pink tracking-tight">
+          Preserve Your Legacy
+        </h1>
+        <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+          Transform your phone photos into heirloom-quality printed albums. 
+          Choose a template, add your stories, and we&lsquo;ll handle the rest.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link 
+            href="/auth/login"
+            className="px-8 py-4 bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-bold rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(34,211,238,0.4)]"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/85 transition-colors hover:border-transparent hover:bg-black/4 dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-39.5"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Get Started
+          </Link>
+          <Link 
+            href="/auth/register"
+            className="px-8 py-4 bg-white/10 border border-white/20 text-white font-medium rounded-full hover:bg-white/20 transition"
           >
-            Documentation
-          </a>
+            Create Account
+          </Link>
         </div>
-      </main>
+      </div>
+
+      {/* Features Grid */}
+      <div className="grid md:grid-cols-3 gap-6 max-w-4xl w-full">
+        <div className="glass p-6 rounded-2xl text-center hover:border-cyan-400/50 transition-all">
+          <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <FaImage className="w-6 h-6 text-cyan-400" />
+          </div>
+          <h3 className="font-semibold mb-2">Upload Photos</h3>
+          <p className="text-sm text-gray-400">Drag & drop your favorite memories. We support JPG, PNG & WebP.</p>
+        </div>
+
+        <div className="glass p-6 rounded-2xl text-center hover:border-pink-400/50 transition-all">
+          <div className="w-12 h-12 bg-pink-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <FaBook className="w-6 h-6 text-pink-400" />
+          </div>
+          <h3 className="font-semibold mb-2">Choose Template</h3>
+          <p className="text-sm text-gray-400">Pick from 4 vintage-inspired layouts. Add captions & stories.</p>
+        </div>
+
+        <div className="glass p-6 rounded-2xl text-center hover:border-green-400/50 transition-all">
+          <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <FaShippingFast className="w-6 h-6 text-green-400" />
+          </div>
+          <h3 className="font-semibold mb-2">We Print & Ship</h3>
+          <p className="text-sm text-gray-400">Pay via M-Pesa or Card. Receive your album in 7-10 days.</p>
+        </div>
+      </div>
+
+      {/* Footer Note */}
+      <p className="mt-16 text-sm text-gray-500">
+        Built with ❤️ in Kenya 🇰 • <span className="text-cyan-400">Legacy Album</span>
+      </p>
+
     </div>
-  );
+  )
 }

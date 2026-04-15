@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// ✅ FIX: Define proper types for Safaricom callback
+// ✅ FIX: Types only - no runtime checks at module level
 interface StkCallback {
   CheckoutRequestID: string
   ResultCode: number
@@ -25,21 +25,27 @@ interface OrderUpdateData {
   payment_status: 'paid' | 'failed'
   payment_result_code: number
   payment_result_desc: string
-  updated_at: string
+  // ✅ FIX: Removed updated_at - column doesn't exist in your DB
   completed_at?: string
   status?: 'confirmed'
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing required environment variables')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
-
 export async function POST(request: Request) {
+  // ✅ FIX: Lazy initialization - only check/create when request comes in
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Missing required environment variables')
+    return NextResponse.json(
+      { error: 'Server configuration error' },
+      { status: 500 }
+    )
+  }
+
+  // Create client inside handler
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+  
   try {
     const body: SafaricomCallbackBody = await request.json()
     
@@ -54,7 +60,7 @@ export async function POST(request: Request) {
     const { CheckoutRequestID, ResultCode, ResultDesc } = stkCallback
     const isSuccess = ResultCode === 0
 
-    // ✅ FIX: Proper destructuring with error handling
+    // Find order
     const { data: orderData, error: fetchError } = await supabaseAdmin
       .from('draft_orders')
       .select('id, user_id')
@@ -63,7 +69,6 @@ export async function POST(request: Request) {
 
     if (fetchError) {
       console.error('Database error fetching order:', fetchError)
-      // Return 200 to prevent Safaricom retries, but log the error
       return NextResponse.json({ message: 'Error processed' }, { status: 200 })
     }
 
@@ -72,12 +77,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Order not found' }, { status: 200 })
     }
 
-    // ✅ FIX: Strongly typed update data
+    // ✅ FIX: Removed updated_at from update data
     const updateData: OrderUpdateData = {
       payment_status: isSuccess ? 'paid' : 'failed',
       payment_result_code: ResultCode,
-      payment_result_desc: ResultDesc,
-      updated_at: new Date().toISOString()
+      payment_result_desc: ResultDesc
     }
 
     if (isSuccess) {
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
       updateData.status = 'confirmed'
     }
 
-    // ✅ FIX: Check update result
+    // Update order
     const { error: updateError } = await supabaseAdmin
       .from('draft_orders')
       .update(updateData)
@@ -93,19 +97,11 @@ export async function POST(request: Request) {
 
     if (updateError) {
       console.error('Failed to update order status:', updateError)
-      // Still return 200 to prevent Safaricom retry loops
       return NextResponse.json({ message: 'Error processed' }, { status: 200 })
     }
 
-    // Optional: Send confirmation notification
     if (isSuccess) {
-      try {
-        // await sendOrderConfirmation(orderData.user_id, orderData.id)
-        console.log(`✅ Payment confirmed for order ${orderData.id}`)
-      } catch (notifyError) {
-        // Log but don't fail the callback - payment is already recorded
-        console.error('Notification failed:', notifyError)
-      }
+      console.log(`✅ Payment confirmed for order ${orderData.id}`)
     } else {
       console.log(`❌ Payment failed for order ${orderData.id}: ${ResultDesc}`)
     }
@@ -120,7 +116,6 @@ export async function POST(request: Request) {
       message = error.message
     }
     
-    // Still return 200 to avoid Safaricom retry loops
     return NextResponse.json({ message: 'Error processed', error: message }, { status: 200 })
   }
 }

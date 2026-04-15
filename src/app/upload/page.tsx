@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/app/upload/page.tsx
 'use client'
 
@@ -13,52 +12,75 @@ export default function UploadPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [draftOrderId, setDraftOrderId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const supabase = createClient()
+
     const init = async () => {
-      // 1. Get authenticated user
-      const { data: { user }, error } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push('/auth/login')
-        return
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+        
+        setUserId(user.id)
+
+        // ✅ FIX: Don't destructure id directly - data could be null
+        const { data, error: draftError } = await supabase
+          .from('draft_orders')
+          .insert({ user_id: user.id, status: 'draft' })
+          .select('id')
+          .single()
+
+        if (draftError || !data) {
+          console.error('Failed to create draft order', draftError)
+          setError('Failed to create order. Please try again.')
+          return
+        }
+
+        // ✅ FIX: Access id safely after null check
+        setDraftOrderId(data.id)
+
+      } catch (err) {
+        console.error('Initialization error:', err)
+        setError('An unexpected error occurred')
+      } finally {
+        setLoading(false)
       }
-      
-      setUserId(user.id)
-
-      // 2. Create a new draft order for this session
-      const { data: { id }, error: draftError } = await supabase
-        .from('draft_orders')
-        .insert({ user_id: user.id })
-        .select('id')
-        .single()
-
-      if (error || !id) {
-        console.error('Failed to create draft order', error)
-        alert('Could not start new album. Please try again.')
-        return
-      }
-
-      setDraftOrderId(id)
-      setLoading(false)
     }
 
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   const handleUploadComplete = () => {
-    // All photos uploaded → navigate to customize with orderId
     if (draftOrderId) {
       router.push(`/customize?orderId=${draftOrderId}`)
     }
   }
 
-  if (loading || !userId || !draftOrderId) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
-        <div className="animate-spin h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full"></div>
+        <div className="animate-spin h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  if (error || !userId || !draftOrderId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white p-4">
+        <div className="text-center glass rounded-2xl p-8 max-w-md">
+          <p className="text-lg mb-4 text-red-400">{error || 'Unable to initialize upload'}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-cyan-500 text-slate-900 rounded-full font-medium hover:bg-cyan-400 transition"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     )
   }
@@ -73,7 +95,6 @@ export default function UploadPage() {
           </p>
         </div>
 
-        {/* Pass draftOrderId to PhotoUpload */}
         <div className="mb-12">
           <PhotoUpload 
             userId={userId} 
@@ -82,7 +103,6 @@ export default function UploadPage() {
           />
         </div>
 
-        {/* Continue Button */}
         <div className="text-center mt-12">
           <button
             onClick={handleUploadComplete}
