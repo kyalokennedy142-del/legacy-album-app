@@ -1,14 +1,13 @@
 // src/app/review/ReviewContent.tsx
 /* eslint-disable @next/next/no-img-element */
- 
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { TEMPLATES } from '@/lib/templates'
 import { FaArrowLeft, FaCheck, FaEdit, FaSpinner } from 'react-icons/fa'
 import DownloadPDFButton from '@/components/DownloadPDFButton'
+import { TEMPLATES } from '@/lib/templates'
 
 type Photo = {
   id: string
@@ -22,6 +21,8 @@ type DraftOrder = {
   id: string
   template_id: string | null
   status: string
+  total_amount: number
+  plan_id: string
   created_at: string
   user_id: string
 }
@@ -46,7 +47,6 @@ export default function ReviewContent() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  // ✅ REF for PDF generation
   const pdfContentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -57,6 +57,7 @@ export default function ReviewContent() {
     if (isMounted) router.push(path)
   }, [isMounted, router])
 
+  // Load order data
   useEffect(() => {
     if (!isMounted || !orderId) return
 
@@ -64,7 +65,7 @@ export default function ReviewContent() {
 
     const loadData = async () => {
       try {
-        // Get user
+        // Get authenticated user
         const { data: { user: userData } } = await supabase.auth.getUser()
         if (!userData) {
           safePush('/auth/login')
@@ -72,10 +73,10 @@ export default function ReviewContent() {
         }
         setUser(userData as User)
 
-        // Get order
+        // Get order with total_amount
         const { data: orderData, error: orderError } = await supabase
           .from('draft_orders')
-          .select('*')
+          .select('id, template_id, status, total_amount, plan_id, created_at, user_id')
           .eq('id', orderId)
           .eq('user_id', userData.id)
           .single()
@@ -83,7 +84,7 @@ export default function ReviewContent() {
         if (orderError || !orderData) throw orderError
         setOrder(orderData)
 
-        // Get photos
+        // Get photos for this order
         const { data: photoData, error: photoError } = await supabase
           .from('order_photos')
           .select('id, public_url, file_name, caption, sequence_number')
@@ -104,28 +105,28 @@ export default function ReviewContent() {
     loadData()
   }, [isMounted, orderId, safePush])
 
+  // ✅ FIX: Redirect to CHECKOUT for payment (not dashboard)
   const handleSubmitOrder = async () => {
-    if (!orderId || !order?.template_id) return
-    
+    if (!orderId) return
     setSubmitting(true)
     
     try {
       const supabase = createClient()
-      const { error } = await supabase
+      // Update status to 'reviewing' (payment pending)
+      await supabase
         .from('draft_orders')
         .update({ 
-          status: 'submitted'
+          status: 'reviewing',
+          updated_at: new Date().toISOString()
         })
         .eq('id', orderId)
 
-      if (error) throw error
-
-      alert('🎉 Order submitted successfully! We\'ll start printing your album.')
-      safePush('/dashboard')
+      // ✅ Redirect to checkout for payment
+      safePush(`/checkout?orderId=${orderId}`)
       
     } catch (error) {
-      console.error('Submission failed', error)
-      alert('Could not submit order. Please try again.')
+      console.error('Failed to proceed to payment', error)
+      alert('Could not proceed to payment. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -135,6 +136,10 @@ export default function ReviewContent() {
     ? TEMPLATES.find(t => t.id === order.template_id)
     : null
 
+  // Format price helper
+  const formatPrice = (amount: number) => `KES ${amount.toLocaleString()}`
+
+  // Loading state
   if (!isMounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white">
@@ -146,6 +151,7 @@ export default function ReviewContent() {
     )
   }
 
+  // Error state
   if (!order || photos.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white p-4">
@@ -164,6 +170,8 @@ export default function ReviewContent() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-950 to-black text-white">
+      
+      {/* Header */}
       <header className="border-b border-white/10 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <button
@@ -179,11 +187,16 @@ export default function ReviewContent() {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         
-        {/* Template Info */}
+        {/* Plan + Price Summary */}
         <section className="mb-8 glass rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-2 neon-pink">Selected Template</h2>
-          <p className="text-gray-300">
-            {selectedTemplate?.name || 'Custom Layout'} — {selectedTemplate?.description || 'No description available'}
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold neon-pink">Selected Plan</h2>
+            <span className="text-2xl font-bold text-cyan-400">
+              {formatPrice(order.total_amount)}
+            </span>
+          </div>
+          <p className="text-gray-300 capitalize">
+            {order.plan_id} Tier • {photos.length} photo{photos.length !== 1 ? 's' : ''}
           </p>
         </section>
 
@@ -243,7 +256,7 @@ export default function ReviewContent() {
           </div>
         </div>
 
-        {/* Order Summary */}
+        {/* Order Summary with Dynamic Price */}
         <section className="glass rounded-2xl p-6 mb-8">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-2 text-sm">
@@ -255,9 +268,13 @@ export default function ReviewContent() {
               <span className="text-gray-400">Template</span>
               <span className="text-white">{selectedTemplate?.name || 'None'}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Plan</span>
+              <span className="text-white capitalize">{order.plan_id}</span>
+            </div>
             <div className="flex justify-between pt-2 border-t border-white/10">
-              <span className="font-medium">Estimated Price</span>
-              <span className="font-bold text-cyan-400">KES 2,499</span>
+              <span className="font-medium">Total</span>
+              <span className="font-bold text-cyan-400">{formatPrice(order.total_amount)}</span>
             </div>
           </div>
         </section>
@@ -272,22 +289,28 @@ export default function ReviewContent() {
             <FaEdit /> Make Changes
           </button>
           
+          {/* ✅ FIX: "Proceed to Payment" → goes to /checkout */}
           <button
             onClick={handleSubmitOrder}
-            disabled={submitting}
-            className="flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold hover:scale-105 transition disabled:opacity-50 disabled:hover:scale-100 shadow-lg"
+            disabled={submitting || photos.length === 0}
+            className="flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-linear-to-r from-cyan-500 to-cyan-600 text-slate-900 font-bold hover:scale-105 transition disabled:opacity-50 disabled:hover:scale-100 shadow-lg"
           >
             {submitting ? (
               <>
-                <FaSpinner className="animate-spin" /> Submitting...
+                <FaSpinner className="animate-spin" /> Processing...
               </>
             ) : (
               <>
-                <FaCheck /> Submit Order — KES 2,499
+                <FaCheck /> Proceed to Payment — {formatPrice(order.total_amount)}
               </>
             )}
           </button>
         </div>
+
+        {/* Trust Badges */}
+        <p className="text-center text-xs text-gray-500 mt-8">
+          🔒 Secure payment via M-Pesa or PayPal • Free delivery across Kenya
+        </p>
 
       </main>
     </div>

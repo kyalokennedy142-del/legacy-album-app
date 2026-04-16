@@ -33,8 +33,6 @@ export default async function OrdersPage() {
     // You might want to show an error UI here instead of empty state
   }
 
-  // ✅ FIX: Remove unused FaCheckCircle import, keep only used ones
-  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-green-500/20 text-green-300 border-green-500/50'

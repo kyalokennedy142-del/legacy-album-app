@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/PayPalButton.tsx
 'use client'
 
@@ -16,12 +17,11 @@ export default function PayPalButton({
   orderId,
   amount,
   currency = 'KES',
+  onSuccess,
   onError,
 }: PayPalButtonProps) {
   const [{ isPending }] = usePayPalScriptReducer()
   const [isCreating, setIsCreating] = useState(false)
-
-  // ✅ FIX: Removed unused supabase client (was imported but never used here)
 
   const createOrder = async (): Promise<string> => {
     setIsCreating(true)
@@ -37,8 +37,8 @@ export default function PayPalButton({
         throw new Error(error.error || 'Failed to create PayPal order')
       }
 
-      const data = await response.json()
-      return data.id
+      const { id } = await response.json()
+      return id
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create order'
       onError(message)
@@ -48,13 +48,11 @@ export default function PayPalButton({
     }
   }
 
-  const handleApprove = async (data: { orderID: string }) => {
+  const handleApprove = async ({ orderID }: { orderID: string }) => {
     // Redirect to capture endpoint — it handles the redirect to confirmation/error
-    window.location.href = `/api/paypal/capture?token=${data.orderID}&orderId=${orderId}`
+    window.location.href = `/api/paypal/capture?token=${orderID}&orderId=${orderId}`
   }
 
-  // ✅ FIX: Renamed from onError to handleError — the prop was named onError too,
-  // causing a fatal shadowing bug where the prop could never be called
   const handleError = (error: Record<string, unknown>) => {
     console.error('PayPal error:', error)
     onError(typeof error?.message === 'string' ? error.message : 'PayPal payment failed')

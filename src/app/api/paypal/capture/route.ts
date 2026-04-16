@@ -1,19 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/api/paypal/capture/route.ts
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
-// ✅ FIX: Removed trailing spaces from both URLs
+// ✅ Lazy-load Supabase admin client only when needed (not at build time)
+const getSupabaseAdmin = async () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !key) {
+    console.error('❌ Missing Supabase admin credentials:', {
+      hasUrl: !!url,
+      hasKey: !!key
+    })
+    throw new Error('Supabase admin credentials not configured')
+  }
+  
+  // Dynamic import to avoid bundling issues at build time
+  const { createClient } = await import('@supabase/supabase-js')
+  return createClient(url, key)
+}
+
 const PAYPAL_BASE_URL = process.env.NODE_ENV === 'production'
   ? 'https://api-m.paypal.com'
   : 'https://api-m.sandbox.paypal.com'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-// ✅ FIX: Added credential check + response.ok guard (was silently returning undefined as token)
-async function getPayPalAccessToken(): Promise<string> {
+const getPayPalAccessToken = async () => {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET
 
@@ -26,10 +37,10 @@ async function getPayPalAccessToken(): Promise<string> {
   const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${token}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${token}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: 'grant_type=client_credentials',
+    body: 'grant_type=client_credentials'
   })
 
   if (!response.ok) {
@@ -41,17 +52,6 @@ async function getPayPalAccessToken(): Promise<string> {
   return data.access_token
 }
 
-// ✅ FIX: Replaced Record<string, any> with a proper interface
-interface OrderUpdatePayload {
-  payment_status: 'paid' | 'failed'
-  payment_method: 'paypal'
-  paypal_order_id: string
-  paypal_capture_id: string | undefined
-  updated_at: string
-  status?: 'confirmed'
-  completed_at?: string
-}
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -60,41 +60,44 @@ export async function GET(request: Request) {
 
     if (!token || !orderId) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/checkout?error=missing_params`
+        new URL('/checkout?error=missing_params', request.url)
       )
     }
 
+    // ✅ Get PayPal access token
     const accessToken = await getPayPalAccessToken()
 
-    const response = await fetch(
-      `${PAYPAL_BASE_URL}/v2/checkout/orders/${token}/capture`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+    // Capture the payment
+    const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${token}/capture`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
       }
-    )
+    })
 
     if (!response.ok) {
       const error = await response.json()
       console.error('PayPal capture error:', error)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/checkout?error=capture_failed`
+        new URL('/checkout?error=capture_failed', request.url)
       )
     }
 
     const captureData = await response.json()
-    const paymentStatus: string = captureData.status
+    const paymentStatus = captureData.status
 
-    const updateData: OrderUpdatePayload = {
+    // ✅ Only initialize Supabase admin client AFTER we know payment succeeded
+    const supabaseAdmin = await getSupabaseAdmin()
+
+    // Update your database
+     
+    const updateData: Record<string, any> = {
       payment_status: paymentStatus === 'COMPLETED' ? 'paid' : 'failed',
       payment_method: 'paypal',
       paypal_order_id: captureData.id,
-      paypal_capture_id:
-        captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id,
-      updated_at: new Date().toISOString(),
+      paypal_capture_id: captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id,
+      updated_at: new Date().toISOString()
     }
 
     if (paymentStatus === 'COMPLETED') {
@@ -107,16 +110,19 @@ export async function GET(request: Request) {
       .update(updateData)
       .eq('id', orderId)
 
-    const redirectUrl =
-      paymentStatus === 'COMPLETED'
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/confirmation?orderId=${orderId}&payment=paypal`
-        : `${process.env.NEXT_PUBLIC_APP_URL}/checkout?orderId=${orderId}&error=payment_failed`
+    // Redirect to confirmation page
+    const redirectUrl = paymentStatus === 'COMPLETED'
+      ? `/confirmation?orderId=${orderId}&payment=paypal`
+      : `/checkout?orderId=${orderId}&error=payment_failed`
 
-    return NextResponse.redirect(redirectUrl)
-  } catch (error) {
+    return NextResponse.redirect(new URL(redirectUrl, request.url))
+
+  } catch (error: any) {
     console.error('PayPal capture error:', error)
+    
+    // Graceful fallback: redirect to checkout with error
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/checkout?error=system_error`
+      new URL('/checkout?error=system_error', request.url)
     )
   }
 }

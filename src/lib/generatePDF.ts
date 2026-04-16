@@ -1,5 +1,21 @@
+// src/lib/generatePDF.ts
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+
+// ✅ Define our own options type (works with all html2canvas versions)
+type CanvasCaptureOptions = {
+  scale?: number
+  useCORS?: boolean
+  allowTaint?: boolean
+  backgroundColor?: string
+  logging?: boolean
+  width?: number
+  height?: number
+  scrollX?: number
+  scrollY?: number
+  windowWidth?: number
+  windowHeight?: number
+}
 
 interface PDFOptions {
   element: HTMLElement
@@ -27,14 +43,17 @@ export async function generatePDF({ element, filename, title, subtitle }: PDFOpt
     pdf.text(subtitle, 20, 30)
   }
 
-  // Capture the element as canvas
-  const canvas = await html2canvas(element, {
+  // ✅ FIX: Use our custom type + safe assertion for html2canvas options
+  const options: CanvasCaptureOptions = {
     scale: 2, // Higher resolution
     useCORS: true, // Allow cross-origin images
     allowTaint: true,
     backgroundColor: '#ffffff',
     logging: false
-  })
+  }
+
+  // Type assertion to satisfy TypeScript (works with any html2canvas version)
+  const canvas = await html2canvas(element, options as Parameters<typeof html2canvas>[1])
 
   const imgData = canvas.toDataURL('image/png')
   

@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/components/PhotoUpload.tsx
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { FaCloudUploadAlt, FaCheckCircle, FaTrashAlt } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaCheckCircle, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa'
 import { uploadFileToSupabase } from '@/lib/uploadService'
 import { createClient } from '@/lib/supabase/client'
 
@@ -12,7 +13,7 @@ type FileWithPreview = {
   id: string
   progress: number
   status: 'uploading' | 'success' | 'error'
-  errorMessage?: string   // ✅ FIX: was missing from the type
+  errorMessage?: string
   url?: string
   path?: string
 }
@@ -21,16 +22,28 @@ interface PhotoUploadProps {
   userId: string
   draftOrderId: string
   onUploadComplete: () => void
+  planId?: string
+  uploadToGallery?: boolean
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: PhotoUploadProps) {
+const PLAN_LIMITS: Record<string, number> = { 
+  'free-trial': 5,
+  heritage: 20, 
+  legacy: 50, 
+  heirloom: Infinity 
+}
+
+export default function PhotoUpload({ 
+  userId, 
+  draftOrderId, 
+  onUploadComplete,
+  planId = 'free-trial',
+  uploadToGallery = false
+}: PhotoUploadProps) {
   const [files, setFiles] = useState<FileWithPreview[]>([])
   const supabase = createClient()
 
-  // ✅ FIX: uploadFile defined before onDrop so the reference is stable
   const uploadFile = useCallback(async (fileItem: FileWithPreview) => {
-    // ✅ FIX: declared OUTSIDE try so catch can reach it
     let progressInterval: ReturnType<typeof setInterval> | null = null
 
     try {
@@ -43,25 +56,89 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
       }, 200)
 
       const result = await uploadFileToSupabase(fileItem.file, userId)
-      clearInterval(progressInterval)
+      if (progressInterval) clearInterval(progressInterval)
 
-      // ✅ FIX: sequence_number read from functional updater to avoid stale closure
       setFiles(prev => {
-        const currentCount = prev.filter(f => f.status === 'success').length
-
-        supabase
-          .from('order_photos')
-          .insert({
-            draft_order_id: draftOrderId,
-            storage_path: result.path,
-            public_url: result.url,
-            file_name: fileItem.file.name,
-            file_size: fileItem.file.size,
-            sequence_number: currentCount,
-          })
-          .then(({ error }) => {
-            if (error) console.error('DB insert failed:', error)
-          })
+        const successCount = prev.filter(f => f.status === 'success').length
+        
+        if (uploadToGallery) {
+          // ✅ Check for duplicate BEFORE inserting
+          supabase
+            .from('user_gallery')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('storage_path', result.path)
+            .maybeSingle()
+            .then(({  data, error: checkError }) => {  // ✅ FIX: Use 'data' not 'existing'
+              if (checkError) {
+                console.error('Error checking existing photo:', checkError)
+                return
+              }
+              
+              if (data) {  // ✅ FIX: Check 'data' not 'existing'
+                // ✅ Photo already exists — show user-friendly warning
+                console.log('⚠️ Photo already in gallery:', fileItem.file.name)
+                setFiles(prevFiles => prevFiles.map(f =>
+                  f.id === fileItem.id
+                    ? { 
+                        ...f, 
+                        progress: 100, 
+                        status: 'success', 
+                        url: result.url, 
+                        path: result.path,
+                        errorMessage: '⚠️ Already in gallery'
+                      }
+                    : f
+                ))
+                // ✅ Show alert to user
+                alert(`"${fileItem.file.name}" is already in your gallery. Skipping duplicate.`)
+                return
+              }
+              
+              // ✅ Insert new photo
+              supabase
+                .from('user_gallery')
+                .insert({
+                  user_id: userId,
+                  storage_path: result.path,
+                  public_url: result.url,
+                  file_name: fileItem.file.name,
+                  file_size: fileItem.file.size,
+                })
+                .then(({ error }) => {
+                  if (error) {
+                    console.error('DB insert failed:', error)
+                    setFiles(prevFiles => prevFiles.map(f =>
+                      f.id === fileItem.id
+                        ? { ...f, status: 'error', errorMessage: 'Failed to save' }
+                        : f
+                    ))
+                  }
+                })
+            })
+        } else {
+          // Legacy flow: insert into order_photos
+          supabase
+            .from('order_photos')
+            .insert({
+              draft_order_id: draftOrderId,
+              storage_path: result.path,
+              public_url: result.url,
+              file_name: fileItem.file.name,
+              file_size: fileItem.file.size,
+              sequence_number: successCount,
+            })
+            .then(({ error }) => {
+              if (error) {
+                console.error('DB insert failed:', error)
+                setFiles(prev => prev.map(f =>
+                  f.id === fileItem.id
+                    ? { ...f, status: 'error', errorMessage: 'Failed to save' }
+                    : f
+                ))
+              }
+            })
+        }
 
         return prev.map(f =>
           f.id === fileItem.id
@@ -72,16 +149,12 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
     } catch (error: unknown) {
       if (progressInterval) clearInterval(progressInterval)
 
-      const err = error as { message?: string; hint?: string; details?: string }
+      const err = error as { message?: string }
       const supabaseError = err?.message ?? 'Unknown error'
-      const errorHint = err?.hint ?? ''
-      const errorDetails = err?.details ?? ''
 
       console.error('Upload failed:', {
         file: fileItem.file.name,
-        supabaseError,
-        hint: errorHint,
-        details: errorDetails,
+        error: supabaseError,
       })
 
       setFiles(prev => prev.map(f =>
@@ -90,24 +163,28 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
               ...f,
               progress: 0,
               status: 'error',
-              errorMessage: supabaseError.includes('violates')
-                ? 'Database constraint error. Check column names or RLS policies.'
-                : supabaseError.includes('foreign key')
-                ? 'Invalid order ID. Please restart the upload process.'
-                : `Failed: ${supabaseError}`,
+              errorMessage: `Failed: ${supabaseError}`,
             }
           : f
       ))
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, draftOrderId])
+  }, [userId, draftOrderId, uploadToGallery])
 
-  // ✅ FIX: uploadFile is now a stable dep so this callback is correct
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const MAX_SIZE = 10 * 1024 * 1024
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+    
+    const maxPhotos = PLAN_LIMITS[planId] ?? 5
+    const currentCount = files.length
+    const remaining = maxPhotos - currentCount
+    
+    if (remaining <= 0) {
+      alert(`You've reached the ${maxPhotos === Infinity ? 'unlimited' : maxPhotos}-photo limit for your ${planId} plan.`)
+      return
+    }
 
     const newFiles = acceptedFiles
+      .slice(0, remaining)
       .filter(file => {
         if (file.size > MAX_SIZE) {
           alert(`${file.name} is too large (max 10MB)`)
@@ -130,9 +207,8 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
       setFiles(prev => [...prev, ...newFiles])
       newFiles.forEach(fileItem => uploadFile(fileItem))
     }
-  }, [uploadFile])
+  }, [files.length, planId, uploadFile])
 
-  // ✅ FIX: useDropzone, removeFile, and return are now at component level (not inside uploadFile)
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': [] },
@@ -143,9 +219,18 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
     setFiles(prev => prev.filter(f => f.id !== id))
   }
 
+  useEffect(() => {
+    if (files.length > 0 && files.every(f => f.status !== 'uploading')) {
+      const allSuccess = files.every(f => f.status === 'success')
+      if (allSuccess) {
+        onUploadComplete()
+      }
+    }
+  }, [files, onUploadComplete])
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
-      {/* Dropzone Area */}
+      {/* Dropzone */}
       <div
         {...getRootProps()}
         className={`relative group cursor-pointer rounded-3xl border-2 border-dashed transition-all duration-300 p-10 text-center
@@ -175,14 +260,17 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
         <div className="space-y-3 max-h-100 overflow-y-auto pr-2">
           {files.map(fileItem => (
             <div key={fileItem.id} className="glass p-3 rounded-xl flex items-center gap-3 animate-slide-up">
+              {/* Thumbnail */}
               <div className="w-12 h-12 rounded-lg bg-slate-800 shrink-0 overflow-hidden relative">
                 {fileItem.url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={fileItem.url} alt="preview" className="w-full h-full object-cover" />
+                  <img src={fileItem.url} alt={fileItem.file.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500">📷</div>
                 )}
               </div>
+              
+              {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{fileItem.file.name}</p>
                 <div className="w-full bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
@@ -194,12 +282,14 @@ export default function PhotoUpload({ userId, draftOrderId, onUploadComplete }: 
                     style={{ width: `${fileItem.progress}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className={`text-xs mt-1 ${fileItem.errorMessage ? 'text-yellow-400' : 'text-gray-400'}`}>
                   {fileItem.status === 'uploading' ? 'Uploading...' :
-                   fileItem.status === 'success' ? 'Ready' :
-                   fileItem.errorMessage ?? 'Failed'}
+                   fileItem.status === 'success' ? (fileItem.errorMessage ? <span className="flex items-center gap-1"><FaExclamationTriangle className="w-3 h-3" /> {fileItem.errorMessage}</span> : '✅ Ready') :
+                   `❌ ${fileItem.errorMessage ?? 'Failed'}`}
                 </p>
               </div>
+              
+              {/* Action */}
               <button
                 onClick={() => removeFile(fileItem.id)}
                 className="p-2 text-gray-400 hover:text-red-400 transition-colors"

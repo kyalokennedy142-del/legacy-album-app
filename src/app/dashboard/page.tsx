@@ -19,7 +19,6 @@ export default async function DashboardPage({
 
   const params = await searchParams
   const submitted = params.submitted
-
   const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
 
   return (
@@ -53,7 +52,7 @@ export default async function DashboardPage({
             </div>
           )}
 
-          {/* Welcome Section */}
+          {/* Welcome */}
           <div className="mb-12 animate-slide-down">
             <h2 className="text-3xl font-bold mb-2">
               Welcome back, {userName}! 👋
@@ -63,12 +62,12 @@ export default async function DashboardPage({
             </p>
           </div>
 
-          {/* Quick Actions Grid */}
+          {/* Quick Actions - Updated to go through /plans */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             
-            {/* Upload Photos */}
+            {/* Upload Photos → Plans First */}
             <Link
-              href="/upload"
+              href="/plans"
               className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-400/50 transition-all hover:scale-105 group"
             >
               <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-cyan-500/30">
@@ -76,8 +75,8 @@ export default async function DashboardPage({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="font-semibold mb-1 text-white">Upload Photos</h3>
-              <p className="text-sm text-gray-400">Start creating your album</p>
+              <h3 className="font-semibold mb-1 text-white">Choose a Plan & Upload</h3>
+              <p className="text-sm text-gray-400">Select your album tier to get started</p>
             </Link>
 
             {/* My Albums */}
@@ -107,14 +106,12 @@ export default async function DashboardPage({
               <h3 className="font-semibold mb-1 text-white">Account Settings</h3>
               <p className="text-sm text-gray-400">Update email & password</p>
             </Link>
-
           </div>
 
-          {/* Recent Activity Section */}
+          {/* Recent Activity */}
           <div className="glass rounded-2xl p-6">
             <h3 className="font-semibold mb-4 text-white">Recent Activity</h3>
             <div className="space-y-4">
-              {/* Placeholder - Replace with real order history fetch */}
               <div className="flex items-center justify-between py-3 border-b border-white/10 last:border-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">

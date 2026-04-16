@@ -1,3 +1,4 @@
+// src/app/confirmation/ConfirmationContent.tsx
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -40,7 +41,6 @@ export default function ConfirmationContent() {
     const loadOrder = async () => {
       try {
         const supabase = createClient()
-        
         const { data: orderData, error: fetchError } = await supabase
           .from('draft_orders')
           .select('*')
@@ -49,15 +49,11 @@ export default function ConfirmationContent() {
 
         if (fetchError) {
           console.error('Failed to load order:', fetchError)
-          setError('Could not load order details. Please check your order ID.')
+          setError('Could not load order details.')
           return
         }
-
-        if (orderData) {
-          setOrder(orderData)
-        } else {
-          setError('Order not found')
-        }
+        if (orderData) setOrder(orderData)
+        else setError('Order not found')
       } catch (err) {
         console.error('Unexpected error:', err)
         setError('An unexpected error occurred')
@@ -65,7 +61,6 @@ export default function ConfirmationContent() {
         setLoading(false)
       }
     }
-
     loadOrder()
   }, [isMounted, orderId])
 
@@ -95,21 +90,19 @@ export default function ConfirmationContent() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-KE', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     })
   }
 
   const isPaid = order.payment_status === 'paid'
   const isConfirmed = order.status === 'confirmed'
-  const displayAmount = order.total_amount ? `KES ${order.total_amount.toLocaleString()}` : 'KES 2,499'
+  const displayAmount = order.total_amount ? `KES ${order.total_amount.toLocaleString()}` : 'KES 25,000'
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-950 to-black text-white py-12 px-4">
       <div className="max-w-2xl mx-auto">
         
+        {/* Success Header */}
         <div className="text-center mb-8 animate-slide-down">
           <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <FaCheckCircle className="w-10 h-10 text-green-400" />
@@ -125,12 +118,12 @@ export default function ConfirmationContent() {
           </p>
         </div>
 
+        {/* Order Details */}
         <div className="glass rounded-2xl p-6 mb-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <FaBox className="text-cyan-400" />
             Order Details
           </h2>
-          
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-white/10">
               <span className="text-gray-400">Order ID</span>
@@ -147,7 +140,7 @@ export default function ConfirmationContent() {
             <div className="flex justify-between py-2 border-b border-white/10">
               <span className="text-gray-400">Payment</span>
               <span className={`font-medium ${isPaid ? 'text-green-400' : 'text-yellow-400'}`}>
-                {isPaid ? 'Paid via M-Pesa' : 'Pending'}
+                {isPaid ? `Paid via ${order.payment_method?.toUpperCase() || 'M-Pesa'}` : 'Pending'}
               </span>
             </div>
             <div className="flex justify-between py-2 pt-3 font-bold">
@@ -157,12 +150,12 @@ export default function ConfirmationContent() {
           </div>
         </div>
 
+        {/* Timeline */}
         <div className="glass rounded-2xl p-6 mb-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <FaTruck className="text-cyan-400" />
             What Happens Next
           </h2>
-          
           <div className="space-y-4">
             {[
               { icon: FaCheckCircle, label: 'Order Confirmed', done: true },
@@ -187,6 +180,7 @@ export default function ConfirmationContent() {
           </div>
         </div>
 
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <button
             onClick={() => safePush('/dashboard')}
@@ -194,7 +188,6 @@ export default function ConfirmationContent() {
           >
             <FaArrowRight /> Back to Dashboard
           </button>
-          
           <button
             onClick={() => window.open('https://wa.me/254700000000', '_blank')}
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition"

@@ -1,12 +1,24 @@
 // src/components/DownloadPDFButton.tsx
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
-import { FaDownload, FaSpinner, FaExclamationCircle } from 'react-icons/fa'
+import { FaDownload, FaSpinner } from 'react-icons/fa'
+
+// ✅ Define our own options type (works with all html2canvas versions)
+type CanvasOptions = {
+  scale?: number
+  useCORS?: boolean
+  allowTaint?: boolean
+  logging?: boolean
+  backgroundColor?: string
+  width?: number
+  height?: number
+}
 
 interface DownloadPDFButtonProps {
+  // ✅ Accept nullable ref (matches React.useRef return type)
   targetRef: React.RefObject<HTMLDivElement | null>
   fileName: string
   className?: string
@@ -18,24 +30,28 @@ export default function DownloadPDFButton({
   className = '' 
 }: DownloadPDFButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const handleDownload = useCallback(async () => {
-    if (!targetRef.current) {
-      setError('No content to capture')
+  const handleDownload = async () => {
+    // ✅ Proper null check before using ref
+    const targetElement = targetRef.current
+    if (!targetElement) {
+      console.error('PDF target element not found')
       return
     }
     
     setIsGenerating(true)
-    setError(null)
     
     try {
-      const canvas = await html2canvas(targetRef.current, {
+      // ✅ Use our custom type + type assertion for compatibility
+      const options: CanvasOptions = {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        logging: false
-      })
+        logging: false,
+        backgroundColor: '#ffffff'
+      }
+
+      const canvas = await html2canvas(targetElement, options as Parameters<typeof html2canvas>[1])
 
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({
@@ -44,23 +60,13 @@ export default function DownloadPDFButton({
         format: 'a4'
       })
 
-      const imgWidth = 210
-      const pageHeight = 297
+      const imgWidth = 210 // A4 width in mm
+      const pageHeight = 297 // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width
 
-      let heightLeft = imgHeight
-      let position = 0
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
       
+      // Add footer
       pdf.setFontSize(8)
       pdf.setTextColor(100, 100, 100)
       pdf.text(
@@ -72,34 +78,22 @@ export default function DownloadPDFButton({
 
       pdf.save(`${fileName}.pdf`)
       
-    } catch (err) {
-      console.error('PDF generation failed:', err)
-      const message = err instanceof Error ? err.message : 'Unknown error occurred'
-      setError(`Could not generate PDF: ${message}`)
+    } catch (error) {
+      console.error('PDF generation failed:', error)
+      alert('Could not generate PDF. Please try again.')
     } finally {
       setIsGenerating(false)
     }
-  }, [fileName, targetRef])
-
-  if (error) {
-    return (
-      <button
-        onClick={() => setError(null)}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30 transition ${className}`}
-      >
-        <FaExclamationCircle /> Error - Click to Retry
-      </button>
-    )
   }
 
   return (
     <button
       onClick={handleDownload}
       disabled={isGenerating}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition border border-white/20 ${
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
         isGenerating 
           ? 'bg-gray-500/20 text-gray-400 cursor-wait' 
-          : 'bg-white/10 hover:bg-white/20 text-white'
+          : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
       } ${className}`}
     >
       {isGenerating ? (
