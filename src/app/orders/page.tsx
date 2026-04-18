@@ -61,8 +61,16 @@ export default function OrdersPage() {
         }
       } catch (err: unknown) {
         console.error('Orders page error:', err)
-        setError(err.message || 'Failed to load orders')
-        addDebug(`Error: ${err.message}`)
+        
+        // ✅ Type-safe error handling
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : typeof err === 'string' 
+            ? err 
+            : 'Failed to load orders'
+        
+        setError(errorMessage)
+        addDebug(`Error: ${errorMessage}`)
       } finally {
         setLoading(false)
       }

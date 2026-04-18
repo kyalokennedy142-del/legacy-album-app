@@ -2,11 +2,11 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { FaArrowLeft, FaCheck, FaEdit, FaSpinner } from 'react-icons/fa'
-import DownloadPDFButton from '@/components/DownloadPDFButton'
+import { FaArrowLeft, FaCheck, FaEdit, FaSpinner, FaDownload } from 'react-icons/fa'
 import { TEMPLATES } from '@/lib/templates'
 
 type Photo = {
@@ -47,8 +47,6 @@ export default function ReviewContent() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  const pdfContentRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     setIsMounted(true)
   }, [])
@@ -57,7 +55,7 @@ export default function ReviewContent() {
     if (isMounted) router.push(path)
   }, [isMounted, router])
 
-  // ✅ FIX: Load order + photos with proper filtering + cache busting
+  // Load order + photos with proper filtering
   useEffect(() => {
     if (!isMounted || !orderId) return
 
@@ -73,12 +71,12 @@ export default function ReviewContent() {
         }
         setUser(userData as User)
 
-        // ✅ Get order with explicit fields + user_id filter
+        // Get order with explicit fields + user_id filter
         const { data: orderData, error: orderError } = await supabase
           .from('draft_orders')
           .select('id, template_id, status, total_amount, plan_id, created_at, user_id')
           .eq('id', orderId)
-          .eq('user_id', userData.id) // ✅ Ensure user owns this order
+          .eq('user_id', userData.id)
           .single()
 
         if (orderError || !orderData) {
@@ -88,21 +86,17 @@ export default function ReviewContent() {
         }
         setOrder(orderData)
 
-        // ✅ Get photos SCOPED to this draft_order_id ONLY
-        // Add cache-busting param to avoid stale data
+        // Get photos SCOPED to this draft_order_id ONLY
         const { data: photoData, error: photoError } = await supabase
           .from('order_photos')
           .select('id, public_url, file_name, caption, sequence_number')
-          .eq('draft_order_id', orderId) // ✅ Critical: filter by exact order ID
+          .eq('draft_order_id', orderId)
           .order('sequence_number', { ascending: true })
-          // Optional: Add cache busting if needed
-          // .neq('cache_bust', Date.now())
 
         if (photoError) {
           console.error('Photo fetch failed:', photoError)
           setPhotos([])
         } else {
-          // ✅ Ensure we only set photos for THIS order
           setPhotos(photoData || [])
           console.log('✅ Loaded photos for order:', orderId, 'count:', photoData?.length)
         }
@@ -118,7 +112,7 @@ export default function ReviewContent() {
     loadData()
   }, [isMounted, orderId, safePush])
 
-  // ✅ Redirect to CHECKOUT for payment (not dashboard)
+  // Redirect to CHECKOUT for payment
   const handleSubmitOrder = async () => {
     if (!orderId) return
     setSubmitting(true)
@@ -134,7 +128,7 @@ export default function ReviewContent() {
         })
         .eq('id', orderId)
 
-      // ✅ Redirect to checkout for payment
+      // Redirect to checkout for payment
       safePush(`/checkout?orderId=${orderId}`)
       
     } catch (error) {
@@ -203,7 +197,7 @@ export default function ReviewContent() {
         {/* Plan + Price Summary */}
         <section className="mb-8 glass rounded-2xl p-6">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-semibold neon-pink">Selected Plan</h2>
+            <h2 className="text-lg font-semibold">Selected Plan</h2>
             <span className="text-2xl font-bold text-cyan-400">
               {formatPrice(order.total_amount)}
             </span>
@@ -213,33 +207,34 @@ export default function ReviewContent() {
           </p>
         </section>
 
-        {/* PDF Download Button */}
-        {selectedTemplate && (
+        
+        {/* ✅ Download Receipt Button - Link to receipt page */}
+        {selectedTemplate && order && (
           <div className="flex justify-center mb-6">
-            <DownloadPDFButton
-              targetRef={pdfContentRef}
-              fileName={`legacy-album-${order.id.slice(0, 8)}`}
-            />
+            <Link
+              href={`/orders/${order.id}/receipt`}
+              target="_blank"
+              className="flex items-center gap-2 px-6 py-3 rounded-lg bg-cyan-500 text-slate-900 font-medium hover:bg-cyan-400 transition"
+            >
+              <FaDownload /> Download Receipt
+            </Link>
           </div>
         )}
 
-        {/* PDF Content - This gets captured */}
-        <div 
-          ref={pdfContentRef} 
-          className="glass rounded-2xl p-6 mb-8 bg-white text-slate-900"
-        >
+        {/* PDF Content Preview - What gets printed */}
+        <div className="glass rounded-2xl p-6 mb-8 bg-white text-slate-900">
           {/* Header for PDF */}
           <div className="border-b border-gray-200 pb-4 mb-4">
             <h2 className="text-2xl font-bold text-slate-800">Legacy Album Proof</h2>
             <p className="text-slate-500">{selectedTemplate?.name || 'Custom'} Template</p>
             <div className="flex justify-between mt-2 text-xs text-slate-400">
-              <span>Order: {order.id.slice(0, 8)}</span>
+              <span>Order: {order?.id.slice(0, 8)}</span>
               <span>{user?.user_metadata?.full_name || user?.email || 'Customer'}</span>
-              <span>{new Date(order.created_at).toLocaleDateString('en-KE')}</span>
+              <span>{order?.created_at ? new Date(order.created_at).toLocaleDateString('en-KE') : ''}</span>
             </div>
           </div>
 
-          {/* Photo Grid - Only shows photos for THIS order */}
+          {/* Photo Grid */}
           <h3 className="text-lg font-semibold mb-4 text-slate-800">Your Photos ({photos.length})</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {photos.map((photo, index) => (
@@ -302,7 +297,7 @@ export default function ReviewContent() {
             <FaEdit /> Make Changes
           </button>
           
-          {/* ✅ Proceed to Payment → goes to /checkout */}
+          {/* Proceed to Payment → goes to /checkout */}
           <button
             onClick={handleSubmitOrder}
             disabled={submitting || photos.length === 0}

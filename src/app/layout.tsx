@@ -90,7 +90,7 @@ export default function RootLayout({
         antialiased
       `}
     >
-      <body className="min-h-full flex flex-col bg-(--bg) text-(--text-primary)">
+      <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
       </body>
     </html>
