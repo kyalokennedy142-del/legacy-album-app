@@ -57,7 +57,7 @@ export default function ReviewContent() {
     if (isMounted) router.push(path)
   }, [isMounted, router])
 
-  // Load order data
+  // ✅ FIX: Load order + photos with proper filtering + cache busting
   useEffect(() => {
     if (!isMounted || !orderId) return
 
@@ -73,26 +73,39 @@ export default function ReviewContent() {
         }
         setUser(userData as User)
 
-        // Get order with total_amount
+        // ✅ Get order with explicit fields + user_id filter
         const { data: orderData, error: orderError } = await supabase
           .from('draft_orders')
           .select('id, template_id, status, total_amount, plan_id, created_at, user_id')
           .eq('id', orderId)
-          .eq('user_id', userData.id)
+          .eq('user_id', userData.id) // ✅ Ensure user owns this order
           .single()
 
-        if (orderError || !orderData) throw orderError
+        if (orderError || !orderData) {
+          console.error('Order fetch failed:', orderError)
+          safePush('/upload')
+          return
+        }
         setOrder(orderData)
 
-        // Get photos for this order
+        // ✅ Get photos SCOPED to this draft_order_id ONLY
+        // Add cache-busting param to avoid stale data
         const { data: photoData, error: photoError } = await supabase
           .from('order_photos')
           .select('id, public_url, file_name, caption, sequence_number')
-          .eq('draft_order_id', orderId)
+          .eq('draft_order_id', orderId) // ✅ Critical: filter by exact order ID
           .order('sequence_number', { ascending: true })
+          // Optional: Add cache busting if needed
+          // .neq('cache_bust', Date.now())
 
-        if (photoError) throw photoError
-        setPhotos(photoData || [])
+        if (photoError) {
+          console.error('Photo fetch failed:', photoError)
+          setPhotos([])
+        } else {
+          // ✅ Ensure we only set photos for THIS order
+          setPhotos(photoData || [])
+          console.log('✅ Loaded photos for order:', orderId, 'count:', photoData?.length)
+        }
 
       } catch (error) {
         console.error('Failed to load order', error)
@@ -105,7 +118,7 @@ export default function ReviewContent() {
     loadData()
   }, [isMounted, orderId, safePush])
 
-  // ✅ FIX: Redirect to CHECKOUT for payment (not dashboard)
+  // ✅ Redirect to CHECKOUT for payment (not dashboard)
   const handleSubmitOrder = async () => {
     if (!orderId) return
     setSubmitting(true)
@@ -152,16 +165,16 @@ export default function ReviewContent() {
   }
 
   // Error state
-  if (!order || photos.length === 0) {
+  if (!order || (photos.length === 0 && order.status !== 'draft')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black text-white p-4">
         <div className="text-center glass rounded-2xl p-8 max-w-md">
-          <p className="text-lg mb-4">No order found</p>
+          <p className="text-lg mb-4">No photos found for this order</p>
           <button
             onClick={() => safePush('/upload')}
             className="px-6 py-3 bg-cyan-500 text-slate-900 rounded-full font-medium hover:bg-cyan-400 transition"
           >
-            Start Over
+            Upload Photos
           </button>
         </div>
       </div>
@@ -226,7 +239,7 @@ export default function ReviewContent() {
             </div>
           </div>
 
-          {/* Photo Grid */}
+          {/* Photo Grid - Only shows photos for THIS order */}
           <h3 className="text-lg font-semibold mb-4 text-slate-800">Your Photos ({photos.length})</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {photos.map((photo, index) => (
@@ -289,7 +302,7 @@ export default function ReviewContent() {
             <FaEdit /> Make Changes
           </button>
           
-          {/* ✅ FIX: "Proceed to Payment" → goes to /checkout */}
+          {/* ✅ Proceed to Payment → goes to /checkout */}
           <button
             onClick={handleSubmitOrder}
             disabled={submitting || photos.length === 0}

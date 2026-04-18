@@ -26,7 +26,7 @@ export default async function DashboardPage({
       {/* Header */}
       <header className="border-b border-white/10 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold neon-pink">Legacy Album</h1>
+          <h1 className="text-white">Legacy Album</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400 hidden sm:inline">{user.email}</span>
             <form action="/auth/signout" method="post">

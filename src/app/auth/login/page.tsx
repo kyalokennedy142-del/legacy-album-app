@@ -83,12 +83,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-black p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-950 to-black p-4 relative overflow-hidden">
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-[200px] h-[200px] bg-pink-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -top-1/2 -left-1/2 w-50 h-50 bg-pink-500/10 rounded-full blur-3xl animate-pulse" />
         <div
-          className="absolute -bottom-1/2 -right-1/2 w-[200px] h-[200px] bg-cyan-500/10 rounded-full blur-3xl animate-pulse"
+          className="absolute -bottom-1/2 -right-1/2 w-50 h-50 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"
           style={{ animationDelay: '1s' }}
         />
       </div>
@@ -143,7 +143,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:from-cyan-300 hover:to-cyan-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-3 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:from-cyan-300 hover:to-cyan-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] hover:scale-[1.02] active:scale-[0.98]"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
@@ -228,7 +228,7 @@ export default function LoginPage() {
                     setForgotSuccess(false)
                     setForgotEmail('')
                   }}
-                  className="w-full py-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:scale-[1.02] transition-all"
+                  className="w-full py-3 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:scale-[1.02] transition-all"
                 >
                   Back to Login
                 </button>
@@ -263,7 +263,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="flex-1 py-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:from-cyan-300 hover:to-cyan-400 transition-all disabled:opacity-50"
+                    className="flex-1 py-3 rounded-full bg-linear-to-r from-cyan-400 to-cyan-500 text-slate-900 font-semibold hover:from-cyan-300 hover:to-cyan-400 transition-all disabled:opacity-50"
                   >
                     {forgotLoading ? 'Sending...' : 'Send Reset Link'}
                   </button>
