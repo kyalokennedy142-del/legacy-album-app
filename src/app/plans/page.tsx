@@ -194,7 +194,7 @@ export default async function PlansPage({
               </p>
             </div>
             <a
-              href="https://wa.me/254700000000?text=Hi%20Legacy%20Album%2C%20which%20plan%20should%20I%20choose%3F"
+              href="https://wa.me/254740481359?text=Hi%20Legacy%20Album%2C%20which%20plan%20should%20I%20choose%3F"
               target="_blank"
               rel="noreferrer"
               className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 font-semibold text-[color:var(--color-navy)] transition active:scale-[0.98]"
