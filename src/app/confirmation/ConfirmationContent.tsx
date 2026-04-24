@@ -96,7 +96,7 @@ export default function ConfirmationContent() {
 
   const isPaid = order.payment_status === 'paid'
   const isConfirmed = order.status === 'confirmed'
-  const displayAmount = order.total_amount ? `KES ${order.total_amount.toLocaleString()}` : 'KES 25,000'
+  const displayAmount = order.total_amount ? `KES ${order.total_amount.toLocaleString()}` : 'KES 7,500'
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-950 to-black text-white py-12 px-4">
@@ -189,7 +189,7 @@ export default function ConfirmationContent() {
             <FaArrowRight /> Back to Dashboard
           </button>
           <button
-            onClick={() => window.open('https://wa.me/254700000000', '_blank')}
+            onClick={() => window.open('https://wa.me/254740481359', '_blank')}
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition"
           >
             📱 Contact Support

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { FaArrowLeft, FaCheck, FaEdit, FaSpinner, FaDownload } from 'react-icons/fa'
 import { TEMPLATES } from '@/lib/templates'
+import UpgradeModal from '@/components/UpgradeModal'
 
 type Photo = {
   id: string
@@ -39,6 +40,7 @@ export default function ReviewContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams?.get('orderId')
+  const showUpgrade = searchParams?.get('upgrade') === '1'
   
   const [isMounted, setIsMounted] = useState(false)
   const [order, setOrder] = useState<DraftOrder | null>(null)
@@ -182,7 +184,7 @@ export default function ReviewContent() {
       <header className="border-b border-white/10 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => safePush('/customize')}
+            onClick={() => safePush(`/customize?orderId=${orderId}`)}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition"
           >
             <FaArrowLeft /> Edit
@@ -192,7 +194,7 @@ export default function ReviewContent() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className={`container mx-auto px-4 py-8 max-w-4xl ${showUpgrade ? 'pointer-events-none blur-[2px]' : ''}`}>
         
         {/* Plan + Price Summary */}
         <section className="mb-8 glass rounded-2xl p-6">
@@ -290,7 +292,7 @@ export default function ReviewContent() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => safePush('/customize')}
+            onClick={() => safePush(`/customize?orderId=${orderId}`)}
             disabled={submitting}
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition disabled:opacity-50"
           >
@@ -321,6 +323,13 @@ export default function ReviewContent() {
         </p>
 
       </main>
+
+      <UpgradeModal
+        isOpen={showUpgrade}
+        fromPath={`/review${orderId ? `?orderId=${orderId}` : ''}`}
+        onClose={() => safePush('/plans')}
+        message="Review and checkout are reserved for paid plans so we can keep premium design, production, and payment support seamless."
+      />
     </div>
   )
 }

@@ -174,7 +174,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <p className="text-lg font-bold text-cyan-300">
-                      KES {(order.total_amount ?? 2499).toLocaleString()}
+                      KES {(order.total_amount ?? 7500).toLocaleString()}
                     </p>
                   </div>
                 </div>

@@ -18,8 +18,7 @@ type GalleryPhoto = {
 }
 
 export const PLAN_LIMITS: Record<string, number> = { 
-  'free-trial': 5,
-  heritage: 20, 
+  free: 10,
   legacy: 50, 
   heirloom: Infinity 
 }

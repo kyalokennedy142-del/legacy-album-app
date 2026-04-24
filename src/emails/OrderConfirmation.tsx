@@ -237,7 +237,7 @@ export default function OrderConfirmation({
                 Questions? We&#39;re happy to help.
               </Text>
               <Text style={{ fontSize: 12, color: B.gold, margin: 0 }}>
-                support@legacy-album.co.ke • WhatsApp +254 7XX XXX XXX
+                support@legacy-album.co.ke • WhatsApp +254740481359
               </Text>
               <Hr style={{ borderColor: B.border, margin: '16px 0 12px' }} />
               <Text style={{ fontSize: 10, color: B.faint, margin: 0 }}>

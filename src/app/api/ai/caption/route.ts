@@ -4,13 +4,13 @@ import { generatePhotoCaption } from '@/lib/ai'
 
 export async function POST(request: Request) {
   try {
-    const { fileName, context } = await request.json()
+    const { fileName, context, locale } = await request.json()
     
     if (!fileName) {
       return NextResponse.json({ error: 'fileName is required' }, { status: 400 })
     }
     
-    const caption = await generatePhotoCaption(fileName, context)
+    const caption = await generatePhotoCaption(fileName, context, locale === 'sw' ? 'sw' : 'en')
     
     return NextResponse.json({ caption })
   } catch (error) {

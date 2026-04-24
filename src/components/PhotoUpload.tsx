@@ -27,8 +27,7 @@ interface PhotoUploadProps {
 }
 
 const PLAN_LIMITS: Record<string, number> = { 
-  'free-trial': 5,
-  heritage: 20, 
+  free: 10,
   legacy: 50, 
   heirloom: Infinity 
 }
@@ -37,7 +36,7 @@ export default function PhotoUpload({
   userId, 
   draftOrderId, 
   onUploadComplete,
-  planId = 'free-trial',
+  planId = 'free',
   uploadToGallery = false
 }: PhotoUploadProps) {
   const [files, setFiles] = useState<FileWithPreview[]>([])

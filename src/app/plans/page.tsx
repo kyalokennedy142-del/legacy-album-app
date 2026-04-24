@@ -1,189 +1,209 @@
-// src/app/plans/page.tsx
-'use client'
-
 import Link from 'next/link'
-import { FaCheck, FaCrown, FaGift, FaScroll, FaTree } from 'react-icons/fa'
+import { FaCheck, FaCrown, FaGift, FaShieldAlt, FaTruck, FaWhatsapp, FaTree } from 'react-icons/fa'
+import { PLAN_CONFIGS } from '@/lib/permissions'
 
-// ✅ SPEC-ALIGNED TIERS (from product overview)
-const PLANS = [
-  {
-    id: 'free-trial',
-    name: 'Free Trial',
-    icon: FaGift,
-    price: 0,
-    photos: 5,
-    trialDays: 7,
-    features: [
-      '5 Photos',
-      '2 Basic Templates',
-      'Standard Print Preview',
-      '7-Day Access',
-      'Upgrade Anytime'
-    ],
-    popular: false,
-    trial: true
-  },
-  {
-    id: 'heritage',
-    name: 'Heritage',
-    icon: FaTree,
-    price: 15000,
-    photos: 20,
-    features: [
-      '5 Premium Templates',
-      'Standard Matte Paper',
-      'Softcover Binding',
-      'Email Support',
-      '7-10 Day Delivery'
-    ],
-    popular: false
-  },
-  {
-    id: 'legacy',
-    name: 'Legacy',
-    icon: FaScroll,
-    price: 25000,
-    photos: 50,
-    features: [
-      'All 12 Templates',
-      'Premium Lustre Paper',
-      'Hardcover Binding',
-      'AI Caption Suggestions',
-      'Priority Support',
-      '5-7 Day Delivery'
-    ],
-    popular: true // Recommended tier
-  },
-  {
-    id: 'heirloom',
-    name: 'Heirloom',
-    icon: FaCrown,
-    price: 40000,
-    photos: -1, // unlimited
-    features: [
-      'Unlimited Photos',
-      'Archival-Quality Paper',
-      'Genuine Leather Cover',
-      'Gold Foil Embossing',
-      'Custom Font Library',
-      'White-Glove Service',
-      '3-5 Day Express Delivery'
-    ],
-    popular: false
-  }
-]
+const launchDeadline = new Date('2026-05-10T23:59:59+03:00').getTime()
 
-export default function PlansPage() {
+function getCountdownLabel() {
+  const now = Date.now()
+  const distance = Math.max(launchDeadline - now, 0)
+  const days = Math.floor(distance / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((distance / (1000 * 60 * 60)) % 24)
+  return `${days}d ${hours}h left`
+}
+
+export default async function PlansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}) {
+  const params = await searchParams
+  const upgradeFrom = params.from ?? '/customize'
+  const countdown = getCountdownLabel()
+  const plans = [
+    {
+      id: 'free',
+      icon: FaGift,
+      cta: 'Start Free Trial',
+      highlight: false,
+      notes: ['7-day access', 'No card required', 'Up to 5 photos'],
+      features: ['5 Photos', '2 Basic Templates', 'Standard Print Preview', '7-Day Access', 'Upgrade Anytime'],
+    },
+    {
+      id: 'heritage',
+      icon: FaTree,
+      cta: 'Select Heritage',
+      highlight: false,
+      notes: ['Up to 20 photos', '5 Premium Templates', 'Standard Matte Paper'],
+      features: ['Softcover Binding', 'Email Support', '7-10 Day Delivery'],
+    },
+    {
+      id: 'legacy',
+      icon: FaShieldAlt,
+      cta: 'Select Legacy',
+      highlight: true,
+      notes: ['Up to 50 photos', 'All 12 Templates', 'Premium Lustre Paper'],
+      features: ['Hardcover Binding', 'AI Caption Suggestions', 'Priority Support', '5-7 Day Delivery'],
+    },
+    {
+      id: 'heirloom',
+      icon: FaCrown,
+      cta: 'Select Heirloom',
+      highlight: false,
+      notes: ['Unlimited photos', 'Unlimited Photos', 'Archival-Quality Paper'],
+      features: ['Genuine Leather Cover', 'Gold Foil Embossing', 'Custom Font Library', 'White-Glove Service', '3-5 Day Express Delivery'],
+    },
+  ] as const
+
   return (
-    <div className="min-h-screen bg-linear-to-brrom-slate-900 via-slate-950 to-black text-white py-16 px-4">
-      <div className="container mx-auto max-w-6xl">
-        
-        {/* Header */}
-        <div className="text-center mb-12 animate-slide-down">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 neon-pink">
-            Preserve Your Legacy
-          </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Choose the perfect tier for your heirloom-quality photo album. 
-            Every plan includes professional printing and doorstep delivery across Kenya.
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(201,160,80,0.16),_transparent_30%),linear-gradient(180deg,#f8f4e9_0%,#f3ede0_35%,#e9e2d2_100%)] px-4 py-10 text-slate-900">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 rounded-[32px] border border-white/60 bg-white/70 p-6 shadow-[0_24px_70px_rgba(30,41,59,0.12)] backdrop-blur-sm">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-[color:var(--color-gold)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-900">
+              Launch Offer - 50% Off
+            </span>
+            <span className="rounded-full bg-[color:var(--color-navy)] px-3 py-1 text-xs font-semibold text-white">
+              {countdown}
+            </span>
+          </div>
+          <h1 className="font-display text-5xl text-[color:var(--color-navy)]">Preserve Your Legacy</h1>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-slate-700">
+            Choose the perfect tier for your heirloom-quality photo album. Every plan
+            includes professional printing and doorstep delivery across Kenya.
           </p>
+
+          <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-700">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2">
+              <FaShieldAlt className="text-[color:var(--color-gold)]" />
+              100% Satisfaction or Your Money Back
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2">
+              <FaTruck className="text-[color:var(--color-gold)]" />
+              Nairobi 2-3 days, Rest of Kenya 5-7 days
+            </span>
+          </div>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {PLANS.map(plan => {
+        <div className="mb-8 grid gap-6 lg:grid-cols-4">
+          {plans.map((plan) => {
+            const config = PLAN_CONFIGS[plan.id]
             const Icon = plan.icon
+
             return (
-              <div 
-                key={plan.id} 
-                className={`glass rounded-2xl p-5 lg:p-6 border-2 transition-all flex flex-col relative ${
-                  plan.popular 
-                    ? 'border-pink-500/50 shadow-[0_0_25px_rgba(236,72,153,0.4)] lg:scale-105 z-10' 
-                    : 'border-white/10 hover:border-white/20'
+              <div
+                key={plan.id}
+                className={`rounded-[30px] border p-6 shadow-[0_18px_50px_rgba(30,41,59,0.12)] ${
+                  plan.highlight
+                    ? 'border-[color:var(--color-gold)] bg-[color:var(--color-navy)] text-white'
+                    : 'border-white/60 bg-white/78 text-slate-900'
                 }`}
               >
-                {/* Popular/Trial Badge */}
-                {(plan.popular || plan.trial) && (
-                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full shadow-lg ${
-                    plan.trial 
-                      ? 'bg-green-500/20 text-green-300 border border-green-500/50'
-                      : 'bg-linear-to-r from-pink-500 to-pink-600 text-white'
-                  }`}>
-                    {plan.trial ? '🎁 Free Trial' : 'Most Popular'}
-                  </span>
-                )}
-
-                {/* Icon + Name */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2.5 rounded-lg ${
-                    plan.popular ? 'bg-pink-500/20' : plan.trial ? 'bg-green-500/20' : 'bg-white/10'
-                  }`}>
-                    <Icon className={`w-5 h-5 ${
-                      plan.popular ? 'text-pink-400' : plan.trial ? 'text-green-400' : 'text-cyan-400'
-                    }`} />
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                        plan.highlight ? 'bg-white/12 text-[color:var(--color-gold)]' : 'bg-[rgba(201,160,80,0.14)] text-[color:var(--color-gold)]'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-label">Plan</p>
+                      <h2 className="text-2xl font-semibold">{config.name}</h2>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold">{plan.name}</h3>
+                  {plan.highlight ? (
+                    <span className="rounded-full bg-[color:var(--color-gold)] px-3 py-1 text-xs font-semibold text-slate-900">
+                      Best Value
+                    </span>
+                  ) : null}
                 </div>
 
-                {/* Price */}
-                <p className="text-2xl lg:text-3xl font-bold text-cyan-400 my-3">
-                  {plan.price === 0 ? 'Free' : `KES ${plan.price.toLocaleString()}`}
+                <p className={`mb-4 text-4xl font-semibold ${plan.highlight ? 'text-white' : 'text-[color:var(--color-navy)]'}`}>
+                  {config.priceKes === 0 ? 'Free' : `KES ${config.priceKes.toLocaleString('en-KE')}`}
                 </p>
-                {plan.trial && (
-                  <p className="text-xs text-green-400 mb-2">
-                    {plan.trialDays}-day access • No card required
-                  </p>
-                )}
 
-                {/* Photo Limit */}
-                <div className="flex items-center gap-2 text-sm text-gray-300 mb-4 pb-3 border-b border-white/10">
-                  <FaCheck className="text-green-400 shrink-0" /> 
-                  {plan.photos === -1 ? 'Unlimited photos' : `Up to ${plan.photos} photos`}
-                </div>
-
-                {/* Features List */}
-                <ul className="space-y-2 mb-6 flex-1">
-                  {plan.features.map(feature => (
-                    <li key={feature} className="flex items-start gap-2 text-xs text-gray-300">
-                      <FaCheck className="text-green-400 shrink-0 mt-0.5" /> 
-                      <span>{feature}</span>
+                <ul className={`mb-5 space-y-2 text-sm ${plan.highlight ? 'text-slate-100' : 'text-slate-700'}`}>
+                  {plan.notes.map((note) => (
+                    <li key={note} className="flex items-start gap-2">
+                      <FaCheck className="mt-0.5 shrink-0 text-[color:var(--color-gold)]" />
+                      <span>{note}</span>
                     </li>
                   ))}
                 </ul>
 
-                {/* Select Button - Routes to Upload with Plan Param */}
-                <Link 
-                  href={`/upload?plan=${plan.id}`}
-                  className={`w-full py-2.5 lg:py-3 rounded-full font-semibold text-center transition-all block text-sm ${
-                    plan.popular
-                      ? 'bg-linear-to-r from-pink-500 to-pink-600 text-white hover:scale-[1.02] shadow-lg shadow-pink-500/25'
-                      : plan.trial
-                      ? 'bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/50'
-                      : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                <div className="mb-6 rounded-2xl border border-white/10 bg-black/5 p-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-gold)]">
+                    Included
+                  </p>
+                  <ul className={`space-y-2 text-sm ${plan.highlight ? 'text-slate-100' : 'text-slate-700'}`}>
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <FaCheck className="mt-0.5 shrink-0 text-[color:var(--color-gold)]" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Link
+                  href={plan.id === 'free' ? '/upload?plan=free' : `/upload?plan=${plan.id}&from=${encodeURIComponent(upgradeFrom)}`}
+                  className={`touch-target flex min-h-11 items-center justify-center rounded-full px-5 py-3 text-center font-semibold transition active:scale-[0.98] ${
+                    plan.highlight
+                      ? 'bg-[color:var(--color-gold)] text-slate-900'
+                      : 'bg-[color:var(--color-navy)] text-white'
                   }`}
                 >
-                  {plan.trial ? 'Start Free Trial' : `Select ${plan.name}`}
+                  {plan.cta}
                 </Link>
-
-                {/* Delivery Note */}
-                <p className="text-[10px] text-gray-500 text-center mt-3">
-                  Free delivery across Kenya
-                </p>
               </div>
             )
           })}
         </div>
 
-        {/* Trust Badges */}
-        <div className="mt-12 text-center">
-          <p className="text-gray-500 text-sm mb-3">Trusted by families across Kenya</p>
-          <div className="flex justify-center gap-4 text-gray-400 text-xs">
-            <span className="flex items-center gap-1">🔒 Secure Payment</span>
-            <span className="flex items-center gap-1">📦 Free Delivery</span>
-            <span className="flex items-center gap-1">✨ Premium Quality</span>
+        <div className="mb-8 rounded-[30px] border border-white/60 bg-white/75 p-6 shadow-[0_18px_50px_rgba(30,41,59,0.12)]">
+          <h2 className="mb-4 text-2xl font-semibold text-[color:var(--color-navy)]">Why Kenyan families trust Legacy Album</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl bg-[rgba(248,244,233,0.9)] p-4">
+              <p className="text-label mb-2">Materials</p>
+              <p className="text-sm text-slate-700">200gsm archival paper, lay-flat binding, soft-touch and leather cover options.</p>
+            </div>
+            <div className="rounded-2xl bg-[rgba(248,244,233,0.9)] p-4">
+              <p className="text-label mb-2">Shipping</p>
+              <p className="text-sm text-slate-700">Nairobi 2-3 days. Rest of Kenya 5-7 days. Delivery updates by WhatsApp.</p>
+            </div>
+            <div className="rounded-2xl bg-[rgba(248,244,233,0.9)] p-4">
+              <p className="text-label mb-2">Support</p>
+              <p className="text-sm text-slate-700">Human support for M-Pesa, templates, and order help when you need it.</p>
+            </div>
+            <div className="rounded-2xl bg-[rgba(248,244,233,0.9)] p-4">
+              <p className="text-label mb-2">Testimonials</p>
+              <p className="text-sm text-slate-700">Collecting stories from our first 10 customers. Your review could be next.</p>
+            </div>
           </div>
         </div>
 
+        <div className="rounded-[30px] border border-[rgba(30,41,59,0.12)] bg-[color:var(--color-navy)] p-6 text-white shadow-[0_18px_50px_rgba(30,41,59,0.2)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold">Need help choosing between Legacy and Heirloom?</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-200">
+                Message us on WhatsApp and we’ll recommend the best option based on your photo count,
+                album finish, and delivery timeline.
+              </p>
+            </div>
+            <a
+              href="https://wa.me/254700000000?text=Hi%20Legacy%20Album%2C%20which%20plan%20should%20I%20choose%3F"
+              target="_blank"
+              rel="noreferrer"
+              className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 font-semibold text-[color:var(--color-navy)] transition active:scale-[0.98]"
+            >
+              <FaWhatsapp />
+              Ask on WhatsApp
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   )

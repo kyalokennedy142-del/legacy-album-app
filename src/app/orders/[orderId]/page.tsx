@@ -144,7 +144,7 @@ async function OrderDetailsPage({ params }: OrderDetailsProps) {
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Total Amount</span>
               <span className="text-2xl font-bold text-cyan-400">
-                KES {(order.total_amount ?? 2499).toLocaleString()}
+                KES {(order.total_amount ?? 7500).toLocaleString()}
               </span>
             </div>
           </div>
@@ -214,7 +214,7 @@ async function OrderDetailsPage({ params }: OrderDetailsProps) {
             Questions about your order? We&apos;re here to help.
           </p>
           <a
-            href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '254700000000'}`}
+            href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '+254740481359'}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-500 text-slate-900 font-medium hover:bg-green-400 transition"

@@ -46,7 +46,7 @@ interface PayPalLink {
 
 export async function POST(request: Request) {
   try {
-    const { orderId, amount = 2499, currency = 'KES' } = await request.json()
+    const { orderId, amount = 7500, currency = 'KES' } = await request.json()
     
     console.log('📥 PayPal create-order request:', { orderId, amount, currency, appUrl: APP_URL })
 

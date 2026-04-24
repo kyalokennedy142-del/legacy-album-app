@@ -1,8 +1,26 @@
 // next.config.ts
 import type { NextConfig } from 'next'
 
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : undefined
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ['192.168.0.110', 'localhost'],
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: supabaseHost
+      ? [
+          {
+            protocol: 'https',
+            hostname: supabaseHost,
+            pathname: '/storage/v1/object/public/**',
+          },
+        ]
+      : [],
+    qualities: [50, 75, 90],
+  },
   
   async headers() {
     return [
@@ -19,7 +37,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.paypal.com https://www.sandbox.paypal.com https://js.stripe.com https://www.paypalobjects.com;
+              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.paypal.com https://www.sandbox.paypal.com https://js.stripe.com https://www.paypalobjects.com https://va.vercel-scripts.com;
               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
               font-src 'self' https://fonts.gstatic.com;
               img-src 'self'  blob: https://*.supabase.co https://*.googleusercontent.com https://www.paypal.com https://www.sandbox.paypal.com https://*.paypalobjects.com;
